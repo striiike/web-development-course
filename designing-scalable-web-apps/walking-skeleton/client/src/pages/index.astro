@@ -1,0 +1,13 @@
+---
+import InputStatistics from "../components/InputStatistics.svelte";
+import DogFacts from "../components/DogFacts.svelte";
+import UserStats from "../components/auth/UserStats.svelte";
+const greet = Astro.props.greet || "component";
+---
+
+
+<InputStatistics client:only/>
+
+<DogFacts client:load />
+
+<UserStats client:visible/>

@@ -1,0 +1,13 @@
+---
+const { id: rawId } = Astro.params;
+
+const id = rawId ?? "";
+
+export const prerender = false;
+
+import ExercisesList from "../../components/ExercisesList.svelte";
+import UserInfo from "../../components/auth/UserInfo.svelte";
+---
+
+<ExercisesList id={id} client:load />
+<UserInfo client:load />

@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+deno.lock
+
+# Environment variables
+*.env
+project.env
+.env.local
+.env.*.local
+
+# Database data
+**/postgres-data/
+**/lgtm-data/
+postgres-data/
+lgtm-data/
+
+# Build outputs
+dist/
+build/
+.astro/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Temporary files
+*.tmp
+*.bak
+cookies.txt
+
+# Submission files
+*-submission.zip
+*.zip
+
+# Scripts that might contain sensitive info
+sub.sh

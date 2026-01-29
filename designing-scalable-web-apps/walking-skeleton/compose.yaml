@@ -1,0 +1,122 @@
+services:
+  database:
+    container_name: postgresql_database
+    image: postgres:17.0
+    restart: unless-stopped
+    env_file:
+      - project.env
+    volumes:
+      - ./bench:/bench
+    labels:
+      - "traefik.enable=false"
+    command: >
+      postgres
+      -c shared_preload_libraries=auto_explain,pg_stat_statements
+      -c auto_explain.log_min_duration=10
+
+  database-migrations:
+    image: flyway/flyway:10
+    env_file:
+      - project.env
+    depends_on:
+      - database
+    volumes:
+      - ./database-migrations:/flyway/sql
+    labels:
+      - "traefik.enable=false"
+    command: -connectRetries=60 -baselineOnMigrate=true migrate
+
+  redis:
+    image: redis:7.4.2
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    labels:
+      - "traefik.enable=false"
+
+  server:
+    build: server
+    restart: unless-stopped
+    volumes:
+      - ./server:/app
+    # ports:
+    #   - 8000-8001:8000
+    env_file:
+      - project.env
+    depends_on:
+      - database
+      - redis
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.10'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.server-router.entrypoints=web"
+      - "traefik.http.routers.server-router.rule=PathPrefix(`/api`)"
+      - "traefik.http.services.server-service.loadbalancer.server.port=8000"
+
+  client:
+    build: client
+    restart: unless-stopped
+    volumes:
+      - ./client:/app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.client-router.entrypoints=web"
+      - "traefik.http.routers.client-router.rule=PathPrefix(`/`)"
+      - "traefik.http.services.client-service.loadbalancer.server.port=4321"
+
+  k6-tests:
+    entrypoint: "/bin/true"
+    build: k6-tests
+    volumes:
+      - ./k6-tests/tests:/tests
+    depends_on:
+      - client
+    labels:
+      - "traefik.enable=false"
+  
+  traefik:
+    image: traefik:v3.3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:8000"
+    ports:
+      - "8080:8080"
+      - "8000:8000"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    labels:
+      - "traefik.enable=false"
+
+  consumer-server:
+    build: consumer-server
+    restart: unless-stopped
+    volumes:
+      - ./consumer-server:/app
+    env_file:
+      - project.env
+    depends_on:
+      - redis
+      - database
+    labels:
+      - "traefik.enable=false"
+  
+  lgtm:
+    image: grafana/otel-lgtm:0.8.6
+    ports:
+      - "3000:3000"
+      - "4318:4318"
+  # inference-api:
+  #   build: inference-api
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./inference-api:/app
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.inference-api-router.entrypoints=web"
+  #     - "traefik.http.routers.inference-api-router.rule=PathPrefix(`/inference-api`)"
+  #     - "traefik.http.services.inference-api-service.loadbalancer.server.port=8000"
